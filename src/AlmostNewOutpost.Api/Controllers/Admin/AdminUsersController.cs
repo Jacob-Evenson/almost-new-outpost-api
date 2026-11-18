@@ -6,6 +6,7 @@ using AlmostNewOutpost.Api.Models.Rows;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AlmostNewOutpost.Api.Services;
 
 namespace AlmostNewOutpost.Api.Controllers.Admin;
 
@@ -18,34 +19,26 @@ public class AdminUsersController : ControllerBase
 {
     private readonly OutpostDbContext _db;
     private readonly IPasswordHasher<UserRow> _passwordHasher;
+    private readonly UserService _userService;
 
     public AdminUsersController(
         OutpostDbContext db,
-        IPasswordHasher<UserRow> passwordHasher)
+        IPasswordHasher<UserRow> passwordHasher,
+        UserService userService)
     {
         _db = db;
         _passwordHasher = passwordHasher;
+        _userService = userService;
     }
 
     [HttpGet]
     public async Task<ActionResult<List<AdminUserDto>>> GetAll(
         [FromQuery] bool includeArchived = false)
     {
-        List<AdminUserDto> adminUsers = await (
-            from user in _db.Users
-            join role in _db.Roles on user.RoleId equals role.RoleId
-            where includeArchived || user.ArchivedAtUtc == null
-            orderby user.Username
-            select new AdminUserDto
-            {
-                Id = user.UserId,
-                Username = user.Username,
-                RoleId = role.RoleId,
-                Role = role.RoleName,
-                ArchivedAtUtc = user.ArchivedAtUtc,
-            }).ToListAsync();
+        List<AdminUserDto> users =
+     await _userService.GetAllAsync(includeArchived);
 
-        return Ok(adminUsers);
+        return Ok(users);
     }
 
     [HttpGet("{id:int}")]
