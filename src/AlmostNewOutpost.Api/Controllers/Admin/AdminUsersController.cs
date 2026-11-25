@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AlmostNewOutpost.Api.Services;
+using AlmostNewOutpost.Api.Models.Constants;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AlmostNewOutpost.Api.Controllers.Admin;
 
@@ -186,5 +188,48 @@ public class AdminUsersController : ControllerBase
         }
 
         return Ok(await FindUserAsync(id));
+    }
+    [HttpPost("{id:int}/archive")]
+    [Authorize(Policy = PolicyNames.AdminOnly)]
+    public async Task<IActionResult> Archive(int id)
+    {
+        UserOperationStatus status = await _userService.ArchiveAsync(id);
+
+        switch (status)
+        {
+            case UserOperationStatus.Success:
+                return NoContent();
+            case UserOperationStatus.NotFound:
+                return Problem(title: "User not found.",
+                    statusCode: StatusCodes.Status404NotFound);
+            case UserOperationStatus.AlreadyArchived:
+                return Problem(title: "This user is already archived.",
+                    statusCode: StatusCodes.Status409Conflict);
+            default:
+                return Problem(title: "Something went wrong.",
+                    statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PolicyNames.AdminOnly)]
+    public async Task<IActionResult> Restore(int id)
+    {
+        UserOperationStatus status = await _userService.RestoreAsync(id);
+
+        switch (status)
+        {
+            case UserOperationStatus.Success:
+                return NoContent();
+            case UserOperationStatus.NotFound:
+                return Problem(title: "User not found.",
+                    statusCode: StatusCodes.Status404NotFound);
+            case UserOperationStatus.NotArchived:
+                return Problem(title: "This user is not archived.",
+                    statusCode: StatusCodes.Status409Conflict);
+            default:
+                return Problem(title: "Something went wrong.",
+                    statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 }
